@@ -308,15 +308,23 @@ class Monitor extends BeanModel {
 
                     debug("heartbeatCount" + heartbeatCount + " " + time);
 
+                    previousBeat = await Monitor.getPreviousHeartbeat(this.id);
+
                     if (heartbeatCount <= 0) {
                         // Fix #922, since previous heartbeat could be inserted by api, it should get from database
-                        previousBeat = await Monitor.getPreviousHeartbeat(this.id);
 
                         throw new Error("No heartbeat in the time window");
                     } else {
                         // No need to insert successful heartbeat for push type, so end here
                         retries = 0;
-                        this.heartbeatInterval = setTimeout(beat, beatInterval * 1000);
+
+                        let nextHeartbeatTime = Date.parse(previousBeat.time) + (this.interval * 1000);
+                        let nextHeartbeat = nextHeartbeatTime - Date.now();
+                        let dayjsHeartbeat = dayjs(nextHeartbeatTime);
+                        console.info(`Next heartbeat for '${this.name}': ${dayjsHeartbeat.toISOString()}`);
+
+                        this.heartbeatInterval = setTimeout(beat, nextHeartbeat);
+
                         return;
                     }
 
